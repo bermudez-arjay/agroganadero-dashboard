@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 
 # ==============================================================================
-# 1. DESIGN & CORPORATE IDENTITY (UI/UX PREMIUM)
+# 1. DESIGN & CORPORATE IDENTITY (UI/UX PREMIUM - FIJADO DE BARRAS LATERALES)
 # ==============================================================================
 st.set_page_config(
     page_title="Dashboard Gerencial | AgroGanadero",
@@ -13,22 +13,40 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inyección de estilos CSS para romper la estética común y dar un acabado de software a medida
+# Inyección de estilos CSS revisado y corregido para barras laterales completas
 st.markdown("""
     <style>
         .block-container { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+        
+        /* Estilo base para tarjetas de métricas */
         .metric-card {
             background-color: #fdfdfd;
-            border-left: 5px solid #2ecc71;
-            padding: 1.2rem;
+            
+            /* -- AJUSTE DE BARRAS LATERALES -- */
+            /* Aumentamos el grosor y forzamos el estilo sólido */
+            border-left: 8px solid #2ecc71; 
+            
+            /* Añadimos padding para darle altura al contenedor y que la barra sea visible */
+            padding: 1.5rem 1.2rem; 
+            
+            /* Suavizado general */
             border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
             border-top: 1px solid #f1f2f6;
             border-right: 1px solid #f1f2f6;
             border-bottom: 1px solid #f1f2f6;
+            
+            /* Asegurar que el contenido no se corte */
+            overflow: visible;
         }
+        
+        /* Variación de color para la tarjeta de Riesgo */
         .metric-card-risk { border-left-color: #e74c3c; }
+        
         h3 { font-weight: 600; color: #2c3e50; font-size: 1.3rem; margin-bottom: 1rem; }
+        
+        /* Ajuste específico para DBeaver/Dona para no romper la app */
+        div.stPlotlyChart { overflow: visible !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -107,7 +125,7 @@ with header_right:
 st.write("---")
 
 # ==============================================================================
-# 5. EXECUTION MATRIX (TARJETAS DE MÉTRICAS / KPIs)
+# 5. EXECUTION MATRIX (TARJETAS DE MÉTRICAS / KPIs REVISADAS)
 # ==============================================================================
 kpi_layout = st.columns(4)
 
@@ -135,7 +153,7 @@ with kpi_layout[3]:
 st.write("##")
 
 # ==============================================================================
-# 6. BUSINESS INTEL GRID (REJILLA GRÁFICA COMBINADA)
+# 6. BUSINESS INTEL GRID (REJILLA GRÁFICA COMBINADA - FIX DE DONA INCLUIDO)
 # ==============================================================================
 chart_left, chart_right = st.columns(2)
 
@@ -164,7 +182,7 @@ with chart_right:
         color_discrete_map={'PAID': '#2ecc71', 'ACTIVE': '#f1c40f', 'OVERDUE': '#e74c3c'}
     )
     
-    # FIX APLICADO: Sintaxis de anidación correcta en Plotly para evitar el ValueError
+    # Sintaxis de anidación correcta en Plotly para evitar el ValueError
     fig_credits.update_traces(
         textinfo='percent+label', 
         marker=dict(line=dict(color='#ffffff', width=2))
