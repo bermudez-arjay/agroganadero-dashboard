@@ -92,26 +92,42 @@ st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True
 # --- FILA 1: KPIs FINANCIEROS CON MINI-GRAFICOS INTERNOS (SPARKLINES) ---
 kpi_cols = st.columns([1, 1, 1, 1])
 
-# KPI 1: Ingresos Totales
+# KPI 1: Ingresos Totales (Con Sparkline integrado de forma limpia)
 with kpi_cols[0]:
     total_rev = df_sales['total_amount'].sum()
-    fig_spark1 = go.Figure(go.Scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines', fill='tozeroy', line=dict(color='#00e676', width=2), fillcolor='rgba(0, 230, 118, 0.1)'))
-    fig_spark1.update_layout(xaxis=dict(visible=False), yaxis=dict(visible=False), margin=dict(l=0, r=0, t=0, b=0), height=40, bgcol='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-    
     st.markdown(f"""
-        <div class="executive-container">
+        <div class="executive-container" style="margin-bottom: 0px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;">
             <div class="section-title">Ingresos Totales (Ventas)</div>
             <div class="main-metric">${total_rev:,.2f}</div>
             <div class="metric-delta delta-positive">▲ En Crecimiento Operativo</div>
         </div>
     """, unsafe_allow_html=True)
+    
+    # Construcción del Sparkline
+    fig_spark1 = go.Figure(go.Scatter(
+        x=sales_trend['fecha'], 
+        y=sales_trend['total_amount'], 
+        mode='lines', 
+        fill='tozeroy', 
+        line=dict(color='#00e676', width=1.5), 
+        fillcolor='rgba(0, 230, 118, 0.08)'
+    ))
+    # SOLUCIÓN AL BUG: Se eliminó bgcol que rompía la ejecución
+    fig_spark1.update_layout(
+        xaxis=dict(visible=False), 
+        yaxis=dict(visible=False), 
+        margin=dict(l=10, r=10, t=0, b=5), 
+        height=35, 
+        paper_bgcolor='#1e2640', 
+        plot_bgcolor='#1e2640'
+    )
     st.plotly_chart(fig_spark1, use_container_width=True, config={'displayModeBar': False})
 
 # KPI 2: Cartera Emitida
 with kpi_cols[1]:
     total_cred = df_credits['total_amount'].sum()
     st.markdown(f"""
-        <div class="executive-container" style="height: 147px;">
+        <div class="executive-container" style="height: 182px;">
             <div class="section-title">Cartera Concedida</div>
             <div class="main-metric">${total_cred:,.2f}</div>
             <div class="metric-delta delta-positive" style="color: #00b0ff;">● Línea de Crédito Activa</div>
@@ -122,7 +138,7 @@ with kpi_cols[1]:
 with kpi_cols[2]:
     total_pending = df_credits['pending_balance'].sum()
     st.markdown(f"""
-        <div class="executive-container" style="height: 147px; border-left: 4px solid #ff5252;">
+        <div class="executive-container" style="height: 182px; border-left: 4px solid #ff5252;">
             <div class="section-title">Riesgo en Calle (Por Cobrar)</div>
             <div class="main-metric" style="color: #ff5252;">${total_pending:,.2f}</div>
             <div class="metric-delta delta-negative">⚠️ Gestión de Cobro Requerida</div>
@@ -133,13 +149,14 @@ with kpi_cols[2]:
 with kpi_cols[3]:
     total_cust = df_customers['id'].nunique()
     st.markdown(f"""
-        <div class="executive-container" style="height: 147px;">
+        <div class="executive-container" style="height: 182px;">
             <div class="section-title">Fincas / Clientes Activos</div>
             <div class="main-metric" style="color: #e040fb;">{total_cust}</div>
             <div class="metric-delta delta-positive">👥 Cobertura Geográfica Estable</div>
         </div>
     """, unsafe_allow_html=True)
 
+st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
 # --- FILA 2: DISTRIBUCIÓN POR REGIÓN & TENDENCIA MENSUAL ---
 row2_col1, row2_col2, row2_col3 = st.columns([1, 1.5, 1])
@@ -173,7 +190,6 @@ with row2_col2:
         template="plotly_white"
     )
     fig_trend.update_traces(marker_color='#00b0ff', marker_line_radius=4)
-    # Línea de superposición ejecutiva
     fig_trend.add_scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines+markers', name='Tendencia', line=dict(color='#00e676', width=3))
     
     fig_trend.update_layout(
@@ -190,7 +206,6 @@ with row2_col3:
     st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>Índice de Salud Financiera</div>", unsafe_allow_html=True)
     
-    # Cálculo dinámico del porcentaje de cobro óptimo versus deudas pendientes
     recovery_rate = (1 - (total_pending / total_cred)) * 100 if total_cred > 0 else 100
     
     fig_gauge = go.Figure(go.Indicator(
@@ -213,7 +228,6 @@ with row2_col3:
     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
     st.markdown("</div>", unsafe_allow_html=True)
 
-
 # --- FILA 3: AUDITORÍA CRÍTICA DE BODEGA E INVENTARIO ---
 row3_col1, row3_col2 = st.columns([1.2, 1.8])
 
@@ -227,7 +241,6 @@ with row3_col1:
     df_alerts = df_prod_batches[['code', 'name', 'current_quantity', 'expiration_date']].sort_values(by='expiration_date').head(5)
     df_alerts['expiration_date'] = df_alerts['expiration_date'].dt.strftime('%d-%m-%Y')
     
-    # Tabla con diseño nativo forzado a oscuro de Streamlit
     st.dataframe(
         df_alerts.rename(columns={'code': 'Lote', 'name': 'Insumo', 'current_quantity': 'Cant.', 'expiration_date': 'Vencimiento'}),
         use_container_width=True,
