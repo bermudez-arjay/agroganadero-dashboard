@@ -148,7 +148,7 @@ with kpi_cols[3]:
     total_cust = df_customers['id'].nunique()
     st.markdown(f"""
         <div class="executive-container" style="height: 182px;">
-            <div class="section-title">Fincas / Clientes Activos</div>
+            <div class="section-title">Clientes Activos</div>
             <div class="main-metric" style="color: #e040fb;">{total_cust}</div>
             <div class="metric-delta delta-positive">👥 Cobertura Geográfica Estable</div>
         </div>
@@ -183,23 +183,12 @@ with row2_col2:
     st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>Tendencia Cierre de Ventas Temporales</div>", unsafe_allow_html=True)
     
-    # Creamos el gráfico base de barras
     fig_trend = px.bar(
         sales_trend, x='fecha', y='total_amount',
         template="plotly_white"
     )
-    
-    # CORRECCIÓN AQUÍ: Se eliminó la propiedad inexistente 'marker_line_radius'
     fig_trend.update_traces(marker_color='#00b0ff')
-    
-    # Añadimos la línea de superposición ejecutiva verde
-    fig_trend.add_scatter(
-        x=sales_trend['fecha'], 
-        y=sales_trend['total_amount'], 
-        mode='lines+markers', 
-        name='Tendencia', 
-        line=dict(color='#00e676', width=2.5)
-    )
+    fig_trend.add_scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines+markers', name='Tendencia', line=dict(color='#00e676', width=2.5))
     
     fig_trend.update_layout(
         showlegend=False,
@@ -265,7 +254,8 @@ with row3_col2:
         df_prod_batches.head(15), x='name', y='current_quantity', color='code',
         labels={'name': 'Insumo / Producto', 'current_quantity': 'Unidades'},
         template="plotly_white",
-        color_discrete_sequence=px.colors.qualitative.Muted
+        # SOLUCIÓN AL BUG: Cambiado de Muted a MUTED en mayúsculas sostenidas
+        color_discrete_sequence=px.colors.qualitative.MUTED
     )
     fig_stock.update_layout(
         showlegend=False,
