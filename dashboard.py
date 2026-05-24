@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS conservados según solicitud
+# Estilos CSS conservados estrictamente
 st.markdown("""
     <style>
         .stApp { background-color: #111625; color: #ffffff; }
@@ -62,15 +62,16 @@ if df_sales.empty or df_credits.empty:
     st.error("Datos no disponibles.")
     st.stop()
 
-# Procesamiento y Traducción de estados
+# Procesamiento
 df_sales['fecha'] = pd.to_datetime(df_sales['created_at']).dt.date
 sales_trend = df_sales.groupby('fecha')['total_amount'].sum().reset_index().sort_values('fecha')
 
+# Mapeo de estados
 status_map = {'PAID': 'Pagado', 'ACTIVE': 'Activo', 'OVERDUE': 'Vencido'}
 df_credits['status_es'] = df_credits['status'].map(status_map)
 
 # ==============================================================================
-# 3. CONSTRUCCIÓN DE LA INTERFAZ
+# 3. INTERFAZ EJECUTIVA
 # ==============================================================================
 header_col1, header_col2 = st.columns([3, 1])
 with header_col1:
@@ -78,9 +79,7 @@ with header_col1:
 with header_col2:
     st.download_button("📥 EXPORTAR DATA", data=df_sales.to_csv(index=False), file_name="Reporte.csv", use_container_width=True)
 
-st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
-
-# Fila KPIs
+# FILA 1: KPIs
 kpi_cols = st.columns([1, 1, 1, 1])
 with kpi_cols[0]:
     st.markdown(f'<div class="executive-container"><div class="section-title">Ingresos Totales</div><div class="main-metric">${df_sales["total_amount"].sum():,.2f}</div></div>', unsafe_allow_html=True)
@@ -91,7 +90,7 @@ with kpi_cols[2]:
 with kpi_cols[3]:
     st.markdown(f'<div class="executive-container"><div class="section-title">Clientes Activos</div><div class="main-metric">{df_customers["id"].nunique()}</div></div>', unsafe_allow_html=True)
 
-# Gráficos
+# FILA 2: GRÁFICOS
 row2_col1, row2_col2, row2_col3 = st.columns([1, 1.5, 1])
 
 with row2_col1:
@@ -117,7 +116,7 @@ with row2_col3:
     st.plotly_chart(fig_g, use_container_width=True, config={'displayModeBar': False})
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Lotes e Inventario
+# FILA 3: INVENTARIO
 st.markdown("<div class='executive-container'><div class='section-title'>📦 Inventario Crítico</div>", unsafe_allow_html=True)
 df_prod_batches = df_batches.merge(df_products, left_on='product_id', right_on='id')
 safe_palette = ['#00b0ff', '#00e676', '#e040fb', '#ffb300', '#ff5252', '#8fa0dd']
