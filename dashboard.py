@@ -91,7 +91,7 @@ with kpi_cols[0]:
     st.markdown(f"""
         <div class="executive-container" style="margin-bottom: 0px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;">
             <div class="section-title">Ingresos Totales (Ventas)</div>
-            <div class="main-metric">${total_rev:,.2f}</div>
+            <div class="main-metric">C${total_rev:,.2f}</div>
             <div class="metric-delta delta-positive">▲ En Crecimiento Operativo</div>
         </div>
     """, unsafe_allow_html=True)
@@ -104,7 +104,7 @@ with kpi_cols[1]:
     st.markdown(f"""
         <div class="executive-container" style="height: 182px;">
             <div class="section-title">Cartera Concedida</div>
-            <div class="main-metric">${total_cred:,.2f}</div>
+            <div class="main-metric">C${total_cred:,.2f}</div>
             <div class="metric-delta delta-positive" style="color: #00b0ff;">● Línea de Crédito Activa</div>
         </div>
     """, unsafe_allow_html=True)
@@ -114,7 +114,7 @@ with kpi_cols[2]:
     st.markdown(f"""
         <div class="executive-container" style="height: 182px; border-left: 4px solid #ff5252;">
             <div class="section-title">Riesgo en Calle (Por Cobrar)</div>
-            <div class="main-metric" style="color: #ff5252;">${total_pending:,.2f}</div>
+            <div class="main-metric" style="color: #ff5252;">C${total_pending:,.2f}</div>
             <div class="metric-delta delta-negative">⚠️ Gestión de Cobro Requerida</div>
         </div>
     """, unsafe_allow_html=True)
