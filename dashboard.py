@@ -107,7 +107,7 @@ with header_right:
 st.write("---")
 
 # ==============================================================================
-# 5. EXECUTION MATRIX (TARJETAS DE MÉTRICAS / KPIs REESTRUCTURADAS)
+# 5. EXECUTION MATRIX (TARJETAS DE MÉTRICAS / KPIs)
 # ==============================================================================
 kpi_layout = st.columns(4)
 
@@ -143,7 +143,7 @@ with chart_left:
     st.markdown("### 📈 Tendencia Macroeconómica de Ventas")
     sales_trend = df_sales.groupby('fecha')['total_amount'].sum().reset_index()
     
-    # Cambio profesional de línea simple a Gráfico de Área para ver el volumen real acumulado
+    # Gráfico de Área para visualizar el volumen real acumulado de ingresos
     fig_sales = px.area(
         sales_trend, x='fecha', y='total_amount',
         labels={'fecha': 'Cronología de Cierres', 'total_amount': 'Volumen Comercial ($)'},
@@ -163,8 +163,13 @@ with chart_right:
         color='status',
         color_discrete_map={'PAID': '#2ecc71', 'ACTIVE': '#f1c40f', 'OVERDUE': '#e74c3c'}
     )
-    # Acabado premium: oculta las leyendas repetitivas y mete las etiquetas directo en el gráfico
-    fig_credits.update_traces(textinfo='percent+label', marker=dict(bordercolor='#ffffff', width=2))
+    
+    # FIX APLICADO: Sintaxis de anidación correcta en Plotly para evitar el ValueError
+    fig_credits.update_traces(
+        textinfo='percent+label', 
+        marker=dict(line=dict(color='#ffffff', width=2))
+    )
+    
     fig_credits.update_layout(showlegend=False, margin=dict(l=15, r=15, t=10, b=15), height=320)
     st.plotly_chart(fig_credits, use_container_width=True)
 
@@ -184,11 +189,11 @@ with ops_left:
     # Combinación para extraer los nombres legibles de los productos asociados al lote
     df_prod_batches = df_batches.merge(df_products, left_on='product_id', right_on='id', suffixes=('_lote', '_prod'))
     
-    # Filtrado fino y limpio de los 5 lotes más urgentes de atención por vencimiento
+    # Filtrado fino de los 5 lotes más urgentes de atención por vencimiento
     df_alerts = df_prod_batches[['code', 'name', 'current_quantity', 'expiration_date']].sort_values(by='expiration_date').head(5)
     df_alerts['expiration_date'] = df_alerts['expiration_date'].dt.strftime('%d-%m-%Y')
     
-    # Cambiamos cabeceras técnicas por nombres comerciales limpios para el gerente
+    # Cambiamos cabeceras técnicas por nombres comerciales limpios para la gerencia
     st.dataframe(
         df_alerts.rename(columns={'code': 'Código Lote', 'name': 'Producto Insumo', 'current_quantity': 'Cant. Disponible', 'expiration_date': 'Vencimiento'}),
         use_container_width=True,
