@@ -2,230 +2,255 @@ import streamlit as st
 import psycopg2
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # ==============================================================================
-# 1. DESIGN & CORPORATE IDENTITY (UI/UX PREMIUM - FIJADO DE BARRAS LATERALES)
+# 1. CONFIGURACIÓN DE PANTALLA & CONTROL DE TEMA OSCURO PREMIUM
 # ==============================================================================
 st.set_page_config(
-    page_title="Dashboard Gerencial | AgroGanadero",
+    page_title="Executive Performance Dashboard | AgroGanadero",
     page_icon="📊",
-    layout="wide",  # Maximiza el uso de espacio en pantallas de oficina
-    initial_sidebar_state="expanded"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Inyección de estilos CSS revisado y corregido para barras laterales completas
+# Inyección de estilos CSS para clonar la interfaz ejecutiva de la imagen de referencia
 st.markdown("""
     <style>
-        .block-container { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+        /* Fondo general de la aplicación en gris oscuro profundo */
+        .stApp { background-color: #111625; color: #ffffff; }
+        .block-container { padding-top: 1rem; padding-bottom: 1rem; }
         
-        /* Estilo base para tarjetas de métricas */
-        .metric-card {
-            background-color: #fdfdfd;
-            
-            /* -- AJUSTE DE BARRAS LATERALES -- */
-            /* Aumentamos el grosor y forzamos el estilo sólido */
-            border-left: 8px solid #2ecc71; 
-            
-            /* Añadimos padding para darle altura al contenedor y que la barra sea visible */
-            padding: 1.5rem 1.2rem; 
-            
-            /* Suavizado general */
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-            border-top: 1px solid #f1f2f6;
-            border-right: 1px solid #f1f2f6;
-            border-bottom: 1px solid #f1f2f6;
-            
-            /* Asegurar que el contenido no se corte */
-            overflow: visible;
+        /* Contenedores de tarjetas y gráficos estilo Control Room */
+        .executive-container {
+            background-color: #1e2640;
+            border-radius: 8px;
+            padding: 1.25rem;
+            border: 1px solid #2a3558;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1rem;
         }
         
-        /* Variación de color para la tarjeta de Riesgo */
-        .metric-card-risk { border-left-color: #e74c3c; }
+        /* Ajustes de fuentes corporativas */
+        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; font-family: 'Inter', sans-serif; font-weight: 600; }
+        .section-title { font-size: 0.85rem; color: #8fa0dd; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        .main-metric { font-size: 2rem; font-weight: 700; color: #ffffff; margin: 0.2rem 0; }
+        .metric-delta { font-size: 0.85rem; font-weight: 500; }
+        .delta-positive { color: #00e676; }
+        .delta-negative { color: #ff5252; }
         
-        h3 { font-weight: 600; color: #2c3e50; font-size: 1.3rem; margin-bottom: 1rem; }
-        
-        /* Ajuste específico para DBeaver/Dona para no romper la app */
-        div.stPlotlyChart { overflow: visible !important; }
+        /* Ocultar elementos por defecto de Streamlit */
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. OPTIMIZED DATA LAYER (PERFORMANCE & SAFE CONNECT)
+# 2. CAPA DE CONEXIÓN OPTIMIZADA A POSTGRESQL (RENDER)
 # ==============================================================================
-@st.cache_data(ttl=300) # Mantiene datos en memoria por 5 minutos para proteger el rendimiento de Render
-def load_executive_data():
+@st.cache_data(ttl=60)
+def fetch_production_data():
     try:
+        # Recuperación automatizada mediante el string de conexión de tus secretos
         db_url = st.secrets["db_credentials"]["connection_string"]
         with psycopg2.connect(db_url) as conn:
-            # Traemos columnas explícitas para optimizar el tráfico de red
             sales = pd.read_sql_query("SELECT total_amount, created_at FROM sales WHERE deleted_at IS NULL;", conn)
             credits = pd.read_sql_query("SELECT total_amount, pending_balance, status FROM credits WHERE deleted_at IS NULL;", conn)
-            batches = pd.read_sql_query("SELECT code, current_quantity, expiration_date, product_id, state FROM batches WHERE deleted_at IS NULL;", conn)
+            batches = pd.read_sql_query("SELECT code, current_quantity, expiration_date, product_id FROM batches WHERE deleted_at IS NULL;", conn)
             customers = pd.read_sql_query("SELECT id FROM customers WHERE deleted_at IS NULL;", conn)
             products = pd.read_sql_query("SELECT id, name FROM products WHERE deleted_at IS NULL;", conn)
         return sales, credits, batches, customers, products
     except Exception as e:
-        st.error(f"⚠️ Falla en la comunicación con la infraestructura de Render: {e}")
+        st.error(f"Error de Infraestructura en Render: {e}")
         return [pd.DataFrame()] * 5
 
-# Carga unificada desde memoria caché
-df_sales, df_credits, df_batches, df_customers, df_products = load_executive_data()
+df_sales, df_credits, df_batches, df_customers, df_products = fetch_production_data()
 
-# Control de integridad antes de renderizar la interfaz
 if df_sales.empty or df_credits.empty:
-    st.warning("Conexión exitosa, pero el almacén de datos no registra actividad transaccional o las tablas están vacías.")
+    st.error("Almacén de datos vacío o inaccesible. Verifique los credenciales en secrets.toml.")
     st.stop()
 
-# ==============================================================================
-# 3. INTERACTIVE AUDIT FILTERS (GLOBAL SIDEBAR)
-# ==============================================================================
-st.sidebar.title("🛠️ Filtros de Auditoría")
-st.sidebar.markdown("Ajuste los parámetros para recalcular el ecosistema financiero.")
-
-# Preparación del filtro cronológico uniforme
+# Procesamiento de fechas uniforme
 df_sales['fecha'] = pd.to_datetime(df_sales['created_at']).dt.date
-min_date, max_date = df_sales['fecha'].min(), df_sales['fecha'].max()
-
-# Input de rango empresarial
-date_range = st.sidebar.date_input(
-    "Periodo Operativo",
-    [min_date, max_date],
-    min_value=min_date,
-    max_value=max_date
-)
-
-# Inyección dinámica de filtros temporales
-if len(date_range) == 2:
-    df_sales = df_sales[(df_sales['fecha'] >= date_range[0]) & (df_sales['fecha'] <= date_range[1])]
-
-st.sidebar.write("---")
-st.sidebar.caption("AgroGanadero v2.0 - Consolidado de Mando Ejecutivo")
+sales_trend = df_sales.groupby('fecha')['total_amount'].sum().reset_index().sort_values('fecha')
 
 # ==============================================================================
-# 4. ENCABEZADO INSTITUCIONAL & DATA GOVERNANCE
+# 3. CONSTRUCCIÓN DE LA INTERFAZ EJECUTIVA EN REJILLA (GRID)
 # ==============================================================================
-header_left, header_right = st.columns([4, 1])
 
-with header_left:
-    st.title("📊 AgroGanadero | Panel de Control Gerencial")
-    st.caption("Consolidado analítico de transacciones, estados de cuentas por cobrar y niveles logísticos de lotes.")
-
-with header_right:
+# --- ENCABEZADO SUPERIOR ---
+header_col1, header_col2 = st.columns([3, 1])
+with header_col1:
+    st.markdown("<h2 style='margin:0;'>RESUMEN DE DESEMPEÑO EJECUTIVO</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#6f80b3; margin:0; font-size:0.9rem;'>Análisis consolidado de transacciones, cuentas por cobrar y salud logística del inventario.</p>", unsafe_allow_html=True)
+with header_col2:
     st.write("")
-    # Botón profesional para exportar los datos filtrados directo a un informe de auditoría CSV
-    st.download_button(
-        label="📥 Exportar Cierre",
-        data=df_sales.to_csv(index=False),
-        file_name="Cierre_Consolidado_Gerencial.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
+    st.download_button("📥 EXPORTAR DATA AUDIT", data=df_sales.to_csv(index=False), file_name="Data_Audit.csv", mime="text/csv", use_container_width=True)
 
-st.write("---")
+st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
 
-# ==============================================================================
-# 5. EXECUTION MATRIX (TARJETAS DE MÉTRICAS / KPIs REVISADAS)
-# ==============================================================================
-kpi_layout = st.columns(4)
+# --- FILA 1: KPIs FINANCIEROS CON MINI-GRAFICOS INTERNOS (SPARKLINES) ---
+kpi_cols = st.columns([1, 1, 1, 1])
 
-with kpi_layout[0]:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric(label="💰 Facturación Neto (Efectivo)", value=f"${df_sales['total_amount'].sum():,.2f}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with kpi_layout[1]:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric(label="📈 Créditos Concedidos", value=f"${df_credits['total_amount'].sum():,.2f}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with kpi_layout[2]:
-    # Tarjeta con variación de riesgo (Inversa para denotar deuda pendiente en rojo)
-    st.markdown('<div class="metric-card metric-card-risk">', unsafe_allow_html=True)
-    st.metric(label="⚠️ Riesgo en Calle (Por Cobrar)", value=f"${df_credits['pending_balance'].sum():,.2f}", delta="Acciones de Cobro Requeridas", delta_color="inverse")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with kpi_layout[3]:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric(label="👥 Fincas y Clientes Activos", value=int(df_customers['id'].nunique()))
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.write("##")
-
-# ==============================================================================
-# 6. BUSINESS INTEL GRID (REJILLA GRÁFICA COMBINADA - FIX DE DONA INCLUIDO)
-# ==============================================================================
-chart_left, chart_right = st.columns(2)
-
-with chart_left:
-    st.markdown("### 📈 Tendencia Macroeconómica de Ventas")
-    sales_trend = df_sales.groupby('fecha')['total_amount'].sum().reset_index()
+# KPI 1: Ingresos Totales
+with kpi_cols[0]:
+    total_rev = df_sales['total_amount'].sum()
+    fig_spark1 = go.Figure(go.Scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines', fill='tozeroy', line=dict(color='#00e676', width=2), fillcolor='rgba(0, 230, 118, 0.1)'))
+    fig_spark1.update_layout(xaxis=dict(visible=False), yaxis=dict(visible=False), margin=dict(l=0, r=0, t=0, b=0), height=40, bgcol='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
     
-    # Gráfico de Área para visualizar el volumen real acumulado de ingresos
-    fig_sales = px.area(
+    st.markdown(f"""
+        <div class="executive-container">
+            <div class="section-title">Ingresos Totales (Ventas)</div>
+            <div class="main-metric">${total_rev:,.2f}</div>
+            <div class="metric-delta delta-positive">▲ En Crecimiento Operativo</div>
+        </div>
+    """, unsafe_allow_html=True)
+    st.plotly_chart(fig_spark1, use_container_width=True, config={'displayModeBar': False})
+
+# KPI 2: Cartera Emitida
+with kpi_cols[1]:
+    total_cred = df_credits['total_amount'].sum()
+    st.markdown(f"""
+        <div class="executive-container" style="height: 147px;">
+            <div class="section-title">Cartera Concedida</div>
+            <div class="main-metric">${total_cred:,.2f}</div>
+            <div class="metric-delta delta-positive" style="color: #00b0ff;">● Línea de Crédito Activa</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# KPI 3: Riesgo Financiero
+with kpi_cols[2]:
+    total_pending = df_credits['pending_balance'].sum()
+    st.markdown(f"""
+        <div class="executive-container" style="height: 147px; border-left: 4px solid #ff5252;">
+            <div class="section-title">Riesgo en Calle (Por Cobrar)</div>
+            <div class="main-metric" style="color: #ff5252;">${total_pending:,.2f}</div>
+            <div class="metric-delta delta-negative">⚠️ Gestión de Cobro Requerida</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# KPI 4: Clientes Activos
+with kpi_cols[3]:
+    total_cust = df_customers['id'].nunique()
+    st.markdown(f"""
+        <div class="executive-container" style="height: 147px;">
+            <div class="section-title">Fincas / Clientes Activos</div>
+            <div class="main-metric" style="color: #e040fb;">{total_cust}</div>
+            <div class="metric-delta delta-positive">👥 Cobertura Geográfica Estable</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+
+# --- FILA 2: DISTRIBUCIÓN POR REGIÓN & TENDENCIA MENSUAL ---
+row2_col1, row2_col2, row2_col3 = st.columns([1, 1.5, 1])
+
+with row2_col1:
+    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Distribución de Riesgo de Crédito</div>", unsafe_allow_html=True)
+    
+    credit_status = df_credits.groupby('status')['total_amount'].sum().reset_index()
+    fig_pie = px.pie(
+        credit_status, values='total_amount', names='status',
+        hole=0.6,
+        color='status',
+        color_discrete_map={'PAID': '#00e676', 'ACTIVE': '#ffb300', 'OVERDUE': '#ff5252'}
+    )
+    fig_pie.update_traces(textinfo='percent', marker=dict(line=dict(color='#1e2640', width=3)))
+    fig_pie.update_layout(
+        showlegend=True, legend=dict(font=dict(color="#ffffff"), orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(l=10, r=10, t=10, b=10), height=280,
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig_pie, use_container_width=True, config={'displayModeBar': False})
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with row2_col2:
+    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Tendencia Cierre de Ventas Temporales</div>", unsafe_allow_html=True)
+    
+    fig_trend = px.bar(
         sales_trend, x='fecha', y='total_amount',
-        labels={'fecha': 'Cronología de Cierres', 'total_amount': 'Volumen Comercial ($)'},
         template="plotly_white"
     )
-    fig_sales.update_traces(line_color='#2ecc71', fillcolor='rgba(46, 204, 113, 0.1)')
-    fig_sales.update_layout(margin=dict(l=15, r=15, t=10, b=15), height=320)
-    st.plotly_chart(fig_sales, use_container_width=True)
-
-with chart_right:
-    st.markdown("### 🍩 Composición y Estado de Riesgo Financiero")
-    credit_status = df_credits.groupby('status')['total_amount'].sum().reset_index()
+    fig_trend.update_traces(marker_color='#00b0ff', marker_line_radius=4)
+    # Línea de superposición ejecutiva
+    fig_trend.add_scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines+markers', name='Tendencia', line=dict(color='#00e676', width=3))
     
-    fig_credits = px.pie(
-        credit_status, values='total_amount', names='status',
-        hole=0.5, template="plotly_white",
-        color='status',
-        color_discrete_map={'PAID': '#2ecc71', 'ACTIVE': '#f1c40f', 'OVERDUE': '#e74c3c'}
+    fig_trend.update_layout(
+        showlegend=False,
+        xaxis=dict(title='', showgrid=False, tickfont=dict(color='#8fa0dd')),
+        yaxis=dict(title='', showgrid=True, gridcolor='#2a3558', tickfont=dict(color='#8fa0dd')),
+        margin=dict(l=10, r=10, t=10, b=10), height=280,
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
     )
+    st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with row2_col3:
+    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Índice de Salud Financiera</div>", unsafe_allow_html=True)
     
-    # Sintaxis de anidación correcta en Plotly para evitar el ValueError
-    fig_credits.update_traces(
-        textinfo='percent+label', 
-        marker=dict(line=dict(color='#ffffff', width=2))
-    )
+    # Cálculo dinámico del porcentaje de cobro óptimo versus deudas pendientes
+    recovery_rate = (1 - (total_pending / total_cred)) * 100 if total_cred > 0 else 100
     
-    fig_credits.update_layout(showlegend=False, margin=dict(l=15, r=15, t=10, b=15), height=320)
-    st.plotly_chart(fig_credits, use_container_width=True)
+    fig_gauge = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = recovery_rate,
+        number = {'suffix': "%", 'font': {'color': '#ffffff', 'size': 35}},
+        gauge = {
+            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#8fa0dd"},
+            'bar': {'color': "#00e676"},
+            'bgcolor': "#111625",
+            'borderwidth': 2,
+            'bordercolor': "#2a3558",
+            'steps': [
+                {'range': [0, 50], 'color': '#ff5252'},
+                {'range': [50, 80], 'color': '#ffb300'},
+                {'range': [80, 100], 'color': '#00e676'}]
+        }
+    ))
+    fig_gauge.update_layout(margin=dict(l=20, r=20, t=30, b=10), height=260, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.write("---")
 
-# ==============================================================================
-# 7. LOGISTICS CONTROL BLOCK (INVENTARIOS Y AUDITORÍA DE LOTES)
-# ==============================================================================
-st.markdown("### 🛡️ Auditoría Operativa de Lotes e Inventario")
+# --- FILA 3: AUDITORÍA CRÍTICA DE BODEGA E INVENTARIO ---
+row3_col1, row3_col2 = st.columns([1.2, 1.8])
 
-ops_left, ops_right = st.columns([2, 3])
-
-with ops_left:
-    st.markdown("##### 🚨 Alertas de Vencimiento de Lotes")
+with row3_col1:
+    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🚨 Alertas Críticas de Vencimiento de Lotes</div>", unsafe_allow_html=True)
+    
     df_batches['expiration_date'] = pd.to_datetime(df_batches['expiration_date'])
-    
-    # Combinación para extraer los nombres legibles de los productos asociados al lote
     df_prod_batches = df_batches.merge(df_products, left_on='product_id', right_on='id', suffixes=('_lote', '_prod'))
     
-    # Filtrado fino de los 5 lotes más urgentes de atención por vencimiento
     df_alerts = df_prod_batches[['code', 'name', 'current_quantity', 'expiration_date']].sort_values(by='expiration_date').head(5)
     df_alerts['expiration_date'] = df_alerts['expiration_date'].dt.strftime('%d-%m-%Y')
     
-    # Cambiamos cabeceras técnicas por nombres comerciales limpios para la gerencia
+    # Tabla con diseño nativo forzado a oscuro de Streamlit
     st.dataframe(
-        df_alerts.rename(columns={'code': 'Código Lote', 'name': 'Producto Insumo', 'current_quantity': 'Cant. Disponible', 'expiration_date': 'Vencimiento'}),
+        df_alerts.rename(columns={'code': 'Lote', 'name': 'Insumo', 'current_quantity': 'Cant.', 'expiration_date': 'Vencimiento'}),
         use_container_width=True,
         hide_index=True
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with ops_right:
-    st.markdown("##### 📦 Distribución de Stock por Lote Específico")
+with row3_col2:
+    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📦 Niveles de Stock de Productos por Lote Activo</div>", unsafe_allow_html=True)
     
     fig_stock = px.bar(
-        df_prod_batches.head(12), x='name', y='current_quantity', color='code',
-        labels={'name': 'Producto Ganadero / Agrícola', 'current_quantity': 'Unidades en Bodega'},
+        df_prod_batches.head(15), x='name', y='current_quantity', color='code',
+        labels={'name': 'Insumo / Producto', 'current_quantity': 'Unidades'},
         template="plotly_white",
-        color_discrete_sequence=px.colors.qualitative.Safe
+        color_discrete_sequence=px.colors.qualitative.Muted
     )
-    fig_stock.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=240, showlegend=False)
-    st.plotly_chart(fig_stock, use_container_width=True)
+    fig_stock.update_layout(
+        showlegend=False,
+        xaxis=dict(title='', tickfont=dict(color='#8fa0dd', size=10)),
+        yaxis=dict(title='', showgrid=True, gridcolor='#2a3558', tickfont=dict(color='#8fa0dd')),
+        margin=dict(l=10, r=10, t=10, b=10), height=215,
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig_stock, use_container_width=True, config={'displayModeBar': False})
+    st.markdown("</div>", unsafe_allow_html=True)
