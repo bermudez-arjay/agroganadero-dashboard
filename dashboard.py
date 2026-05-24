@@ -51,7 +51,6 @@ st.markdown("""
 @st.cache_data(ttl=60)
 def fetch_production_data():
     try:
-        # Recuperación automatizada mediante el string de conexión de tus secretos
         db_url = st.secrets["db_credentials"]["connection_string"]
         with psycopg2.connect(db_url) as conn:
             sales = pd.read_sql_query("SELECT total_amount, created_at FROM sales WHERE deleted_at IS NULL;", conn)
@@ -92,7 +91,7 @@ st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True
 # --- FILA 1: KPIs FINANCIEROS CON MINI-GRAFICOS INTERNOS (SPARKLINES) ---
 kpi_cols = st.columns([1, 1, 1, 1])
 
-# KPI 1: Ingresos Totales (Con Sparkline integrado de forma limpia)
+# KPI 1: Ingresos Totales
 with kpi_cols[0]:
     total_rev = df_sales['total_amount'].sum()
     st.markdown(f"""
@@ -112,7 +111,6 @@ with kpi_cols[0]:
         line=dict(color='#00e676', width=1.5), 
         fillcolor='rgba(0, 230, 118, 0.08)'
     ))
-    # SOLUCIÓN AL BUG: Se eliminó bgcol que rompía la ejecución
     fig_spark1.update_layout(
         xaxis=dict(visible=False), 
         yaxis=dict(visible=False), 
@@ -185,12 +183,23 @@ with row2_col2:
     st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>Tendencia Cierre de Ventas Temporales</div>", unsafe_allow_html=True)
     
+    # Creamos el gráfico base de barras
     fig_trend = px.bar(
         sales_trend, x='fecha', y='total_amount',
         template="plotly_white"
     )
-    fig_trend.update_traces(marker_color='#00b0ff', marker_line_radius=4)
-    fig_trend.add_scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines+markers', name='Tendencia', line=dict(color='#00e676', width=3))
+    
+    # CORRECCIÓN AQUÍ: Se eliminó la propiedad inexistente 'marker_line_radius'
+    fig_trend.update_traces(marker_color='#00b0ff')
+    
+    # Añadimos la línea de superposición ejecutiva verde
+    fig_trend.add_scatter(
+        x=sales_trend['fecha'], 
+        y=sales_trend['total_amount'], 
+        mode='lines+markers', 
+        name='Tendencia', 
+        line=dict(color='#00e676', width=2.5)
+    )
     
     fig_trend.update_layout(
         showlegend=False,
