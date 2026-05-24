@@ -14,7 +14,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inyección de estilos CSS para clonar la interfaz ejecutiva
 st.markdown("""
     <style>
         .stApp { background-color: #111625; color: #ffffff; }
@@ -62,8 +61,12 @@ def fetch_production_data():
 df_sales, df_credits, df_batches, df_customers, df_products = fetch_production_data()
 
 if df_sales.empty or df_credits.empty:
-    st.error("Almacén de datos vacío o inaccesible. Verifique los credenciales en secrets.toml.")
+    st.error("Almacén de datos vacío o inaccesible.")
     st.stop()
+
+# Mapeo de traducción
+status_map = {'PAID': 'Pagado', 'ACTIVE': 'Activo', 'OVERDUE': 'Vencido'}
+df_credits['status_es'] = df_credits['status'].map(status_map)
 
 # Procesamiento de fechas
 df_sales['fecha'] = pd.to_datetime(df_sales['created_at']).dt.date
@@ -73,7 +76,7 @@ sales_trend = df_sales.groupby('fecha')['total_amount'].sum().reset_index().sort
 # 3. CONSTRUCCIÓN DE LA INTERFAZ EJECUTIVA
 # ==============================================================================
 
-# --- ENCABEZADO SUPERIOR ---
+# --- ENCABEZADO ---
 header_col1, header_col2 = st.columns([3, 1])
 with header_col1:
     st.markdown("<h2 style='margin:0;'>Dashboard Gerencial</h2>", unsafe_allow_html=True)
@@ -83,101 +86,51 @@ with header_col2:
 
 st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
 
-# --- FILA 1: KPIs FINANCIEROS ---
+# --- FILA 1: KPIs ---
 kpi_cols = st.columns([1, 1, 1, 1])
 
 with kpi_cols[0]:
     total_rev = df_sales['total_amount'].sum()
-    st.markdown(f"""
-        <div class="executive-container" style="margin-bottom: 0px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;">
-            <div class="section-title">Ingresos Totales (Ventas)</div>
-            <div class="main-metric">${total_rev:,.2f}</div>
-            <div class="metric-delta delta-positive">▲ En Crecimiento Operativo</div>
-        </div>
-    """, unsafe_allow_html=True)
-    fig_spark1 = go.Figure(go.Scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines', fill='tozeroy', line=dict(color='#00e676', width=1.5), fillcolor='rgba(0, 230, 118, 0.08)'))
-    fig_spark1.update_layout(xaxis=dict(visible=False), yaxis=dict(visible=False), margin=dict(l=10, r=10, t=0, b=5), height=35, paper_bgcolor='#1e2640', plot_bgcolor='#1e2640')
-    st.plotly_chart(fig_spark1, use_container_width=True, config={'displayModeBar': False})
+    st.markdown(f"""<div class="executive-container"><div class="section-title">Ingresos Totales</div><div class="main-metric">${total_rev:,.2f}</div></div>""", unsafe_allow_html=True)
 
 with kpi_cols[1]:
     total_cred = df_credits['total_amount'].sum()
-    st.markdown(f"""
-        <div class="executive-container" style="height: 182px;">
-            <div class="section-title">Cartera Concedida</div>
-            <div class="main-metric">${total_cred:,.2f}</div>
-            <div class="metric-delta delta-positive" style="color: #00b0ff;">● Línea de Crédito Activa</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="executive-container" style="height: 140px;"><div class="section-title">Cartera Concedida</div><div class="main-metric">${total_cred:,.2f}</div></div>""", unsafe_allow_html=True)
 
 with kpi_cols[2]:
     total_pending = df_credits['pending_balance'].sum()
-    st.markdown(f"""
-        <div class="executive-container" style="height: 182px; border-left: 4px solid #ff5252;">
-            <div class="section-title">Riesgo en Calle (Por Cobrar)</div>
-            <div class="main-metric" style="color: #ff5252;">${total_pending:,.2f}</div>
-            <div class="metric-delta delta-negative">⚠️ Gestión de Cobro Requerida</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="executive-container" style="height: 140px; border-left: 4px solid #ff5252;"><div class="section-title">Riesgo en Calle</div><div class="main-metric" style="color: #ff5252;">${total_pending:,.2f}</div></div>""", unsafe_allow_html=True)
 
 with kpi_cols[3]:
     total_cust = df_customers['id'].nunique()
-    st.markdown(f"""
-        <div class="executive-container" style="height: 182px;">
-            <div class="section-title">Clientes Activos</div>
-            <div class="main-metric" style="color: #e040fb;">{total_cust}</div>
-            <div class="metric-delta">👥</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="executive-container" style="height: 140px;"><div class="section-title">Clientes Activos</div><div class="main-metric" style="color: #e040fb;">{total_cust}</div></div>""", unsafe_allow_html=True)
 
 # --- FILA 2: DISTRIBUCIÓN & TENDENCIA ---
 row2_col1, row2_col2, row2_col3 = st.columns([1, 1.5, 1])
 
 with row2_col1:
     st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>Distribución de Riesgo de Crédito</div>", unsafe_allow_html=True)
-    credit_status = df_credits.groupby('status')['total_amount'].sum().reset_index()
-    fig_pie = px.pie(credit_status, values='total_amount', names='status', hole=0.6, color='status', color_discrete_map={'PAID': '#00e676', 'ACTIVE': '#ffb300', 'OVERDUE': '#ff5252'})
-    fig_pie.update_layout(showlegend=True, legend=dict(font=dict(color="#ffffff"), orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5), margin=dict(l=10, r=10, t=10, b=10), height=280, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    st.markdown("<div class='section-title'>Distribución de Crédito</div>", unsafe_allow_html=True)
+    credit_status = df_credits.groupby('status_es')['total_amount'].sum().reset_index()
+    fig_pie = px.pie(credit_status, values='total_amount', names='status_es', hole=0.6, 
+                     color='status_es', color_discrete_map={'Pagado': '#00e676', 'Activo': '#ffb300', 'Vencido': '#ff5252'})
+    fig_pie.update_layout(showlegend=True, legend=dict(font=dict(color="#ffffff"), orientation="h", yanchor="bottom", y=-0.2), height=250, paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_pie, use_container_width=True, config={'displayModeBar': False})
     st.markdown("</div>", unsafe_allow_html=True)
 
 with row2_col2:
     st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>Tendencia Cierre de Ventas Temporales</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Tendencia Cierre de Ventas</div>", unsafe_allow_html=True)
     fig_trend = px.bar(sales_trend, x='fecha', y='total_amount')
-    fig_trend.update_traces(marker_color='#00b0ff')
-    fig_trend.add_scatter(x=sales_trend['fecha'], y=sales_trend['total_amount'], mode='lines+markers', name='Tendencia', line=dict(color='#00e676', width=2.5))
-    fig_trend.update_layout(showlegend=False, xaxis=dict(title='', showgrid=False, tickfont=dict(color='#8fa0dd')), yaxis=dict(title='', showgrid=True, gridcolor='#2a3558', tickfont=dict(color='#8fa0dd')), margin=dict(l=10, r=10, t=10, b=10), height=280, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    fig_trend.update_layout(height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
     st.markdown("</div>", unsafe_allow_html=True)
 
 with row2_col3:
     st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>Índice de Salud Financiera</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Salud Financiera</div>", unsafe_allow_html=True)
     recovery_rate = (1 - (total_pending / total_cred)) * 100 if total_cred > 0 else 100
-    fig_gauge = go.Figure(go.Indicator(mode="gauge+number", value=recovery_rate, number={'suffix': "%", 'font': {'color': '#ffffff', 'size': 35}}, gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#00e676"}, 'steps': [{'range': [0, 50], 'color': '#ff5252'}, {'range': [50, 80], 'color': '#ffb300'}, {'range': [80, 100], 'color': '#00e676'}]}))
-    fig_gauge.update_layout(margin=dict(l=20, r=20, t=30, b=10), height=260, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    fig_gauge = go.Figure(go.Indicator(mode="gauge+number", value=recovery_rate, gauge={'bar': {'color': "#00e676"}}))
+    fig_gauge.update_layout(height=230, paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# --- FILA 3: AUDITORÍA CRÍTICA ---
-row3_col1, row3_col2 = st.columns([1.2, 1.8])
-
-with row3_col1:
-    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🚨 Alertas Críticas de Vencimiento de Lotes</div>", unsafe_allow_html=True)
-    df_batches['expiration_date'] = pd.to_datetime(df_batches['expiration_date'])
-    df_prod_batches = df_batches.merge(df_products, left_on='product_id', right_on='id', suffixes=('_lote', '_prod'))
-    df_alerts = df_prod_batches[['code', 'name', 'current_quantity', 'expiration_date']].sort_values(by='expiration_date').head(5)
-    df_alerts['expiration_date'] = df_alerts['expiration_date'].dt.strftime('%d-%m-%Y')
-    st.dataframe(df_alerts.rename(columns={'code': 'Lote', 'name': 'Insumo', 'current_quantity': 'Cant.', 'expiration_date': 'Vencimiento'}), use_container_width=True, hide_index=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with row3_col2:
-    st.markdown("<div class='executive-container'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📦 Niveles de Stock de Productos por Lote Activo</div>", unsafe_allow_html=True)
-    safe_palette = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
-    fig_stock = px.bar(df_prod_batches.head(15), x='name', y='current_quantity', color='code', color_discrete_sequence=safe_palette)
-    fig_stock.update_layout(showlegend=False, xaxis=dict(title='', tickfont=dict(color='#8fa0dd', size=10)), yaxis=dict(title='', showgrid=True, gridcolor='#2a3558', tickfont=dict(color='#8fa0dd')), margin=dict(l=10, r=10, t=10, b=10), height=215, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig_stock, use_container_width=True, config={'displayModeBar': False})
     st.markdown("</div>", unsafe_allow_html=True)
