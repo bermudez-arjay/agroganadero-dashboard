@@ -8,16 +8,19 @@ def fetch_production_data():
     with psycopg2.connect(db_url) as conn:
         # Ventas
         sales = pd.read_sql_query("""
-            SELECT s.total_amount, a.first_name as vendor_name 
+            SELECT s.total_amount, a.first_name as vendor_name, s.created_at 
             FROM sales s JOIN admins a ON s.admin_id = a.id WHERE s.deleted_at IS NULL;
         """, conn)
-        # Créditos
+        
+        # Compras
+        purchases = pd.read_sql_query("""
+            SELECT p.total_amount, s.company_name as supplier_name, p.purchase_date 
+            FROM purchases p JOIN suppliers s ON p.supplier_id = s.id WHERE p.deleted_at IS NULL;
+        """, conn)
+        
+        # Créditos y Lotes
         credits = pd.read_sql_query("SELECT pending_balance, status FROM credits WHERE deleted_at IS NULL;", conn)
-        # Lotes
         batches = pd.read_sql_query("SELECT current_quantity, state FROM batches WHERE deleted_at IS NULL;", conn)
-        # Clientes
-        customers = pd.read_sql_query("SELECT id FROM customers WHERE deleted_at IS NULL;", conn)
-        # Productos
         products = pd.read_sql_query("SELECT name, selling_price FROM products WHERE deleted_at IS NULL;", conn)
         
-        return sales, credits, batches, customers, products
+        return sales, purchases, credits, batches, products
