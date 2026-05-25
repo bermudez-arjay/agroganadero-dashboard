@@ -1,89 +1,75 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from utils import fetch_production_data
 
 # Configuración de página
 st.set_page_config(page_title="Dashboard Analítico", layout="wide")
 
-# Estilos ejecutivos oscuros (coherentes con el dashboard principal)
+# Estilos ejecutivos oscuros
 st.markdown("""
     <style>
-        .stApp { background-color: #111625; }
-        h1, h2, h3 { color: #ffffff !important; }
+        .stApp { background-color: #0e1117; }
         .metric-card { 
             background-color: #1e2640; 
             padding: 20px; 
             border-radius: 10px; 
             border: 1px solid #2a3558; 
-            margin-bottom: 10px;
+            text-align: center;
         }
-        /* Forzar visibilidad del botón de menú */
-        [data-testid="stSidebarCollapseButton"] { visibility: visible !important; }
+        h1, h2, h3 { color: #ffffff !important; }
     </style>
 """, unsafe_allow_html=True)
-
-st.title("📊 Análisis Profundo de Operaciones")
 
 # Carga de datos
 df_sales, df_credits, df_batches, df_customers, df_products = fetch_production_data()
 
-# --- FILTROS ---
-st.sidebar.header("Filtros de Análisis")
-if not df_products.empty:
-    selected_product = st.sidebar.selectbox("Seleccionar Insumo:", df_products['name'].unique())
+st.title("📊 Análisis Profundo de Operaciones")
 
-    # Lógica de filtrado con manejo de seguridad
-    prod_row = df_products[df_products['name'] == selected_product]
-    
-    if not prod_row.empty:
-        prod_id = prod_row.iloc[0]['id']
-        selling_price = prod_row.iloc[0].get('selling_price', 0)
-        purchase_price = prod_row.iloc[0].get('purchase_price', 0)
-        
-        prod_batches = df_batches[df_batches['product_id'] == prod_id]
-        total_stock = prod_batches['current_quantity'].sum()
+# --- FILA 1: KPIs RESUMEN EJECUTIVO ---
+st.subheader("Resumen de Rendimiento Global")
+c1, c2, c3, c4 = st.columns(4)
 
-        # --- FILA 1: KPIs DE PRODUCTO ---
-        col1, col2, col3, col4 = st.columns(4)
+with c1:
+    st.markdown(f'<div class="metric-card"><h3>Ventas</h3><h1>C${df_sales["total_amount"].sum():,.0f}</h1></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown(f'<div class="metric-card"><h3>Stock Total</h3><h1>{df_batches["current_quantity"].sum():,.0f}</h1></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown(f'<div class="metric-card"><h3>Cartera Activa</h3><h1>C${df_credits["pending_balance"].sum():,.0f}</h1></div>', unsafe_allow_html=True)
+with c4:
+    st.markdown(f'<div class="metric-card"><h3>Clientes</h3><h1>{len(df_customers)}</h1></div>', unsafe_allow_html=True)
 
-        col1.metric("Stock Actual", f"{total_stock} Unidades")
-        col2.metric("Lotes Activos", len(prod_batches))
-        col3.metric("Precio de Venta", f"C${selling_price:,.2f}")
-        col4.metric("Valor Inv. (Costo)", f"C${(total_stock * purchase_price):,.2f}")
+st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown("---")
+# --- FILTRO Y ANÁLISIS POR PRODUCTO ---
+st.sidebar.header("Análisis por Insumo")
+selected_product = st.sidebar.selectbox("Seleccionar Insumo:", df_products['name'].unique())
 
-        # --- FILA 2: GRÁFICOS ---
-        row2_col1, row2_col2 = st.columns(2)
+# Obtener datos del producto seleccionado
+prod_row = df_products[df_products['name'] == selected_product].iloc[0]
+prod_batches = df_batches[df_batches['product_id'] == prod_row['id']]
 
-        with row2_col1:
-            st.subheader("Distribución de Cantidades por Lote")
-            fig_bar = px.bar(prod_batches, x='code', y='current_quantity', color='code', 
-                             template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig_bar.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_bar, use_container_width=True)
+st.subheader(f"Detalle Operativo: {selected_product}")
 
-        with row2_col2:
-            st.subheader("Cronograma de Vencimiento")
-            if 'expiration_date' in prod_batches.columns:
-                prod_batches['expiration_date'] = pd.to_datetime(prod_batches['expiration_date'])
-                fig_scatter = px.scatter(prod_batches, x='expiration_date', y='current_quantity', 
-                                         size='current_quantity', color='code', 
-                                         template="plotly_dark", color_discrete_sequence=['#00e676'])
-                fig_scatter.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig_scatter, use_container_width=True)
+# Fila de visualización táctica
+row2_c1, row2_c2 = st.columns([1, 2])
 
-        # --- FILA 3: TABLA ---
-        st.subheader("Detalle de Lotes")
-        st.dataframe(prod_batches.rename(columns={
-            'code': 'Lote', 
-            'current_quantity': 'Stock', 
-            'expiration_date': 'Vencimiento',
-            'state': 'Estado'
-        }), use_container_width=True, hide_index=True)
-        
-    else:
-        st.error("Producto no encontrado.")
-else:
-    st.warning("No hay productos cargados en la base de datos.")
+with row2_c1:
+    st.metric("Precio de Venta", f"C${prod_row['selling_price']:,.2f}")
+    st.metric("Lotes en Inventario", len(prod_batches))
+    st.write("Estado de Lotes:")
+    fig_pie = px.pie(prod_batches, names='state', hole=0.5, template="plotly_dark")
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+with row2_c2:
+    st.subheader("Distribución de Cantidades por Lote")
+    fig_bar = px.bar(prod_batches, x='code', y='current_quantity', 
+                     text='current_quantity', template="plotly_dark")
+    fig_bar.update_traces(marker_color='#00e676')
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+# Tabla final de detalle
+st.subheader("Registros de Lote")
+st.dataframe(prod_batches[['code', 'current_quantity', 'expiration_date', 'state']], 
+             use_container_width=True, hide_index=True)
