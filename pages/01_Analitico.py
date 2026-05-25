@@ -3,18 +3,35 @@ import plotly.express as px
 import pandas as pd
 from utils import fetch_production_data
 
+# Configuración de página
 st.set_page_config(page_title="Dashboard Táctico", layout="wide")
 
+# Estilos CSS para los KPIs (basados en tu referencia visual)
+def kpi_card(title, value, description):
+    st.markdown(f"""
+    <div style="background-color: #1e2536; padding: 20px; border-radius: 10px; border-left: 5px solid #2ecc71;">
+        <p style="color: #8899a6; margin: 0; font-size: 14px;">{title}</p>
+        <h2 style="color: white; margin: 5px 0;">{value}</h2>
+        <p style="color: #2ecc71; margin: 0; font-size: 14px;">▲ {description}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Carga de datos
 df_sales, df_purchases, df_credits, df_batches, df_products = fetch_production_data()
 
 st.title("📊 Dashboard Táctico")
 
-# --- 1. KPI PRINCIPALES ---
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Ventas Totales", f"C${df_sales['total_amount'].sum():,.2f}")
-c2.metric("Inversión Compras", f"C${df_purchases['total_amount'].sum():,.2f}")
-c3.metric("Stock en Lotes", f"{df_batches['current_quantity'].sum():,.0f}")
-c4.metric("Cartera Pendiente", f"C${df_credits['pending_balance'].sum():,.2f}")
+# --- 1. KPI PRINCIPALES (Estilizados) ---
+k1, k2, k3, k4 = st.columns(4)
+
+with k1:
+    kpi_card("INGRESOS TOTALES", f"C${df_sales['total_amount'].sum():,.2f}", "En Crecimiento Operativo")
+with k2:
+    kpi_card("INVERSIÓN COMPRAS", f"C${df_purchases['total_amount'].sum():,.2f}", "Flujo de Abastecimiento")
+with k3:
+    kpi_card("STOCK GLOBAL", f"{df_batches['current_quantity'].sum():,.0f} Unid.", "Disponibilidad Actual")
+with k4:
+    kpi_card("CARTERA PENDIENTE", f"C${df_credits['pending_balance'].sum():,.2f}", "Saldo por Cobrar")
 
 st.markdown("---")
 
@@ -22,7 +39,7 @@ st.markdown("---")
 row1_c1, row1_c2 = st.columns([2, 1])
 
 with row1_c1:
-    st.subheader("Tendencia: Ventas vs Compras")
+    st.subheader("Tendencia: Ventas vs. Compras")
     df_sales['date'] = pd.to_datetime(df_sales['created_at']).dt.date
     df_purchases['date'] = pd.to_datetime(df_purchases['purchase_date']).dt.date
     
@@ -34,7 +51,7 @@ with row1_c1:
     st.plotly_chart(fig_line, use_container_width=True)
 
 with row1_c2:
-    st.subheader("Distribución de Lote por Estados")
+    st.subheader("Distribución de Lotes")
     fig_pie = px.pie(df_batches, names='state', hole=0.5, template="plotly_dark")
     st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -52,8 +69,8 @@ with row2_c2:
                        x='supplier_name', y='total_amount', color_discrete_sequence=['indianred'], template="plotly_dark")
     st.plotly_chart(fig_bar_p, use_container_width=True)
 
-# --- 4. NUEVO: TREEMAP DE PRODUCTOS ---
-st.subheader("Jerarquía de Productos por Valor de Venta")
+# --- 4. TREEMAP DE PRODUCTOS (Detalle jerárquico) ---
+st.subheader("Jerarquía de Productos por Valor")
 fig_tree = px.treemap(
     df_products, 
     path=['name'], 
@@ -63,3 +80,4 @@ fig_tree = px.treemap(
     template="plotly_dark"
 )
 st.plotly_chart(fig_tree, use_container_width=True)
+
