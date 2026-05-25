@@ -11,33 +11,19 @@ st.set_page_config(
     page_title="Executive Performance Dashboard | AgroGanadero",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="auto"
 )
 
-# Inyección de estilos CSS para clonar la interfaz ejecutiva
 st.markdown("""
     <style>
         .stApp { background-color: #111625; color: #ffffff; }
-        .block-container { padding-top: 1rem; padding-bottom: 1rem; }
-        
-        .executive-container {
-            background-color: #1e2640;
-            border-radius: 8px;
-            padding: 1.25rem;
-            border: 1px solid #2a3558;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            margin-bottom: 1rem;
-        }
-        
-        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; font-family: 'Inter', sans-serif; font-weight: 600; }
-        .section-title { font-size: 0.85rem; color: #8fa0dd; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
-        .main-metric { font-size: 2rem; font-weight: 700; color: #ffffff; margin: 0.2rem 0; }
-        .metric-delta { font-size: 0.85rem; font-weight: 500; }
-        .delta-positive { color: #00e676; }
-        .delta-negative { color: #ff5252; }
-        
+        .executive-container { background-color: #1e2640; border-radius: 8px; padding: 1.25rem; border: 1px solid #2a3558; margin-bottom: 1rem; }
+        h1, h2, h3 { color: #ffffff !important; }
+        .section-title { font-size: 0.85rem; color: #8fa0dd; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .main-metric { font-size: 2rem; font-weight: 700; color: #ffffff; }
         footer {visibility: hidden;}
-        header {visibility: hidden;}
+        /* Esto asegura que el botón de menú nunca se oculte */
+        [data-testid="stSidebarCollapseButton"] { visibility: visible !important; }
     </style>
 """, unsafe_allow_html=True)
 
