@@ -32,7 +32,7 @@ st.markdown("---")
 row1_c1, row1_c2 = st.columns([2, 1])
 
 with row1_c1:
-    st.subheader("Tendencia: Ventas (Azul) vs Compras (Rojo)")
+    st.subheader("Tendencia: Ventas vs Compras")
     df_sales['date'] = pd.to_datetime(df_sales['created_at']).dt.date
     df_purchases['date'] = pd.to_datetime(df_purchases['purchase_date']).dt.date
     
