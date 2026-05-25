@@ -1,14 +1,13 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import plotly.graph_objects as go
 from utils import fetch_production_data
 
 st.set_page_config(page_title="Dashboard Táctico", layout="wide")
 
 df_sales, df_purchases, df_credits, df_batches, df_products = fetch_production_data()
 
-st.title("📊 Dashboard Táctico")
+st.title("📊 Control Táctico: Operaciones e Inventario")
 
 # --- 1. KPI PRINCIPALES ---
 c1, c2, c3, c4 = st.columns(4)
@@ -24,7 +23,6 @@ row1_c1, row1_c2 = st.columns([2, 1])
 
 with row1_c1:
     st.subheader("Tendencia: Ventas vs Compras")
-    # Consolidado para gráfico
     df_sales['date'] = pd.to_datetime(df_sales['created_at']).dt.date
     df_purchases['date'] = pd.to_datetime(df_purchases['purchase_date']).dt.date
     
@@ -36,13 +34,12 @@ with row1_c1:
     st.plotly_chart(fig_line, use_container_width=True)
 
 with row1_c2:
-    st.subheader("Distribución de Stock")
+    st.subheader("Distribución de Estados")
     fig_pie = px.pie(df_batches, names='state', hole=0.5, template="plotly_dark")
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- 3. VISTA DE RENDIMIENTO ---
+# --- 3. RENDIMIENTO (Vendedores y Proveedores) ---
 row2_c1, row2_c2 = st.columns(2)
-
 with row2_c1:
     st.subheader("Ventas por Vendedor")
     fig_bar = px.bar(df_sales.groupby('vendor_name')['total_amount'].sum().reset_index(), 
@@ -55,9 +52,21 @@ with row2_c2:
                        x='supplier_name', y='total_amount', color_discrete_sequence=['indianred'], template="plotly_dark")
     st.plotly_chart(fig_bar_p, use_container_width=True)
 
-# --- 4. STORYTELLING TÁCTICO ---
+# --- 4. NUEVO: TREEMAP DE PRODUCTOS ---
+st.subheader("Jerarquía de Productos por Valor de Venta")
+fig_tree = px.treemap(
+    df_products, 
+    path=['name'], 
+    values='selling_price',
+    color='selling_price',
+    color_continuous_scale='RdBu',
+    template="plotly_dark"
+)
+st.plotly_chart(fig_tree, use_container_width=True)
+
+# --- 5. STORYTELLING TÁCTICO ---
 with st.expander("💡 Análisis Táctico de Flujo"):
-    st.write("**Contexto:** Comparativa del ciclo de conversión de efectivo.")
-    st.write("**Evidencia:** Se observa la relación directa entre el volumen de compra y la capacidad de venta.")
-    st.write("**Insight:** Ajustar el stock en función de los periodos donde las ventas superan la inversión en compras.")
-    st.write("**Decisión:** Optimizar compras para insumos con mayor rotación (Beta 10) y reducir stock en productos de lenta rotación.")
+    st.write("**Contexto:** Evaluación del ciclo de conversión de efectivo y catálogo.")
+    st.write("**Evidencia:** El Treemap identifica los productos de mayor impacto en ventas.")
+    st.write("**Insight:** Hay productos con alta inversión de compra pero baja rotación en el Treemap.")
+    st.write("**Decisión:** Reasignar presupuesto de compra hacia los insumos con mayor área visual en el Treemap.")
