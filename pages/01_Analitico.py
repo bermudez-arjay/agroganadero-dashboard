@@ -7,7 +7,7 @@ st.set_page_config(page_title="Dashboard Táctico", layout="wide")
 # Carga de datos (coincide con los 5 retornos de utils.py)
 df_sales, df_credits, df_batches, df_customers, df_products = fetch_production_data()
 
-st.title("📈 Dashboard Táctico de Ventas")
+st.title("📈 Dashboard Táctico")
 
 # --- 1. JERARQUÍA VISUAL (KPIs) ---
 col1, col2, col3, col4 = st.columns(4)
