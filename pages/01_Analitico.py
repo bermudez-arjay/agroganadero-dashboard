@@ -7,7 +7,7 @@ st.set_page_config(page_title="Dashboard Táctico", layout="wide")
 
 df_sales, df_purchases, df_credits, df_batches, df_products = fetch_production_data()
 
-st.title("📊 Control Táctico: Operaciones e Inventario")
+st.title("📊 Dashboard Táctico")
 
 # --- 1. KPI PRINCIPALES ---
 c1, c2, c3, c4 = st.columns(4)
@@ -34,7 +34,7 @@ with row1_c1:
     st.plotly_chart(fig_line, use_container_width=True)
 
 with row1_c2:
-    st.subheader("Distribución de Estados")
+    st.subheader("Distribución de Lote por Estados")
     fig_pie = px.pie(df_batches, names='state', hole=0.5, template="plotly_dark")
     st.plotly_chart(fig_pie, use_container_width=True)
 
