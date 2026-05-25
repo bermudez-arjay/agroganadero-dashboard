@@ -63,10 +63,3 @@ fig_tree = px.treemap(
     template="plotly_dark"
 )
 st.plotly_chart(fig_tree, use_container_width=True)
-
-# --- 5. STORYTELLING TÁCTICO ---
-with st.expander("💡 Análisis Táctico de Flujo"):
-    st.write("**Contexto:** Evaluación del ciclo de conversión de efectivo y catálogo.")
-    st.write("**Evidencia:** El Treemap identifica los productos de mayor impacto en ventas.")
-    st.write("**Insight:** Hay productos con alta inversión de compra pero baja rotación en el Treemap.")
-    st.write("**Decisión:** Reasignar presupuesto de compra hacia los insumos con mayor área visual en el Treemap.")
