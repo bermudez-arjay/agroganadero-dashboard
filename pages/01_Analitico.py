@@ -17,7 +17,7 @@ def kpi_card(title, value, description, color):
 
 df_sales, df_purchases, df_credits, df_batches, df_products = fetch_production_data()
 
-st.title("📊 Dashboard Táctico: Control Operativo")
+st.title("📊 Dashboard Táctico")
 
 # --- 1. KPI PRINCIPALES (Paleta: Azul, Rojo, Verde) ---
 k1, k2, k3, k4 = st.columns(4)
