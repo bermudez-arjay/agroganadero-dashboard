@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 # ==============================================================================
 # 1. CONFIGURACIÓN & ESTILOS PROFESIONALES
 # ==============================================================================
-st.set_page_config(page_title="Dashboard Gerencial", page_icon="", layout="wide")
+st.set_page_config(page_title="Dashboard Gerencial", page_icon=":)", layout="wide")
 
 st.markdown("""
     <style>
@@ -41,7 +41,7 @@ if not data: st.stop()
 # ==============================================================================
 # 3. CONSTRUCCIÓN DEL DASHBOARD
 # ==============================================================================
-st.markdown("## 📊 Dashboard Gerencial")
+st.markdown("##  Dashboard Gerencial")
 
 # --- FILA 1: KPIs ---
 kpi_cols = st.columns(4)
