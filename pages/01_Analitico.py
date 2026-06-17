@@ -38,7 +38,7 @@ def kpi_card(title, value, description, color):
     </div>
     """, unsafe_allow_html=True)
 
-st.title("📊 Dashboard Táctico")
+st.title("Dashboard Táctico")
 
 # --- 1. KPI PRINCIPALES ---
 k1, k2, k3, k4 = st.columns(4)
