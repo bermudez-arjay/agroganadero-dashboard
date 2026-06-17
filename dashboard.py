@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 # ==============================================================================
 # 1. CONFIGURACIÓN & ESTILOS PROFESIONALES
 # ==============================================================================
-st.set_page_config(page_title="Dashboard Gerencial", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard Gerencial", page_icon="", layout="wide")
 
 st.markdown("""
     <style>
